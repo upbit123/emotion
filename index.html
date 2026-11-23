@@ -30,7 +30,10 @@
             <video id="cam" playsinline muted></video>
             <p class="cam-status">● 카메라 켜짐 · 기기 안에서만 분석</p>
             <ul id="cues"></ul>
-            <button id="cam-off">웹캠 끄기</button>
+            <div class="cam-buttons">
+              <button id="recalibrate">다시 보정</button>
+              <button id="cam-off">웹캠 끄기</button>
+            </div>
           </aside>
         </div>
         <p class="hint">마우스를 자유롭게 움직여 보세요. 움직임도 그림이 돼요.</p>
@@ -38,6 +41,7 @@
           <div id="card-body">
             <p id="card-step" class="card-step"></p>
             <h2 id="card-q"></h2>
+            <div id="grid-host"></div>
             <div id="card-options" class="card-options"></div>
           </div>
           <div id="card-done" hidden>
@@ -55,6 +59,7 @@
             <h2>이런 감정들이 보여요</h2>
             <p class="sub">제안일 뿐이에요. 맞는 걸 고르고, 비율을 조절하고, 딱 맞는 말이 없으면 직접 써 보세요.</p>
             <div id="suggestions" class="chips"></div>
+            <ul id="reasons" class="reasons"></ul>
             <details>
               <summary>다른 감정 더 보기</summary>
               <div id="all-emotions" class="chips"></div>

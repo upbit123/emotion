@@ -9,6 +9,7 @@ export default defineConfig({
       input: {
         main: resolve(import.meta.dirname, 'index.html'),
         preview: resolve(import.meta.dirname, 'preview.html'),
+        faceLab: resolve(import.meta.dirname, 'face-lab.html'),
       },
     },
   },

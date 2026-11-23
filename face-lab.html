@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>표정 확인 실험실</title>
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <main id="app" class="lab">
+      <h2>표정 확인 실험실</h2>
+      <p class="sub">
+        표정 규칙을 내 얼굴 데이터에 맞추는 화면이에요. 영상은 이 기기 안에서만 분석하고, 기록은 '내보내기'를 누를 때만 파일로 저장돼요.
+      </p>
+      <div class="actions">
+        <button id="lab-start" class="primary">웹캠 켜기</button>
+        <button id="lab-calibrate" disabled>무표정 보정 (3초)</button>
+        <span id="lab-status" class="sub"></span>
+      </div>
+
+      <div class="lab-grid">
+        <section>
+          <video id="lab-cam" playsinline muted></video>
+          <h3>기록하기</h3>
+          <p class="sub">감정을 고르고, 그 표정을 지은 채 '3초 기록'을 누르세요. 감정마다 2~3번씩 기록하면 좋아요.</p>
+          <div class="actions">
+            <select id="lab-label"></select>
+            <button id="lab-record" disabled>3초 기록</button>
+            <button id="lab-export" disabled>JSON 내보내기</button>
+          </div>
+          <table class="lab-table" id="lab-summary"></table>
+        </section>
+        <section>
+          <h3>감정 점수 (규칙 결과)</h3>
+          <div id="lab-emotions" class="bars"></div>
+          <h3>얼굴 움직임 (보정·정규화 후)</h3>
+          <div id="lab-features" class="bars"></div>
+          <p class="sub" id="lab-pitch"></p>
+          <details>
+            <summary>근육 원본값 52개</summary>
+            <div id="lab-raw" class="bars small"></div>
+          </details>
+        </section>
+      </div>
+    </main>
+    <script type="module" src="/src/face-lab.js"></script>
+  </body>
+</html>

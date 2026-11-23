@@ -59,6 +59,7 @@ button.primary { background: var(--accent); color: #1a1600; border-color: var(--
 }
 #cam-panel video { width: 100%; border-radius: 8px; transform: scaleX(-1); }
 #cam-panel button { padding: 4px 12px; font-size: 0.8rem; }
+.cam-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
 .cam-status { color: #7ee2a8; margin: 6px 0; }
 #cues { padding-left: 1em; margin: 4px 0 8px; }
 .cue-guess { color: var(--accent); list-style: none; margin-left: -1em; }
@@ -94,7 +95,49 @@ summary { cursor: pointer; }
 .gap { background: rgba(241, 201, 75, 0.1); color: var(--text); border-radius: 10px; padding: 10px 14px; margin-top: 16px; }
 .cues { padding-left: 1.1em; color: var(--muted); }
 
+/* 감정 좌표 판 */
+#grid-host:empty { display: none; }
+#grid-host { display: grid; gap: 12px; justify-items: start; }
+.affect-grid {
+  position: relative; width: min(100%, 360px); aspect-ratio: 1;
+  margin: 18px 48px; border-radius: 12px; cursor: crosshair; touch-action: none;
+  background:
+    linear-gradient(var(--line), var(--line)) center / 1px 100% no-repeat,
+    linear-gradient(var(--line), var(--line)) center / 100% 1px no-repeat,
+    linear-gradient(135deg, rgba(190, 110, 255, 0.18), rgba(255, 210, 90, 0.18) 50%, transparent),
+    linear-gradient(315deg, rgba(90, 200, 190, 0.2), rgba(80, 110, 200, 0.18) 50%, transparent),
+    #0e1015;
+}
+.affect-grid .corner { position: absolute; font-size: 0.8rem; color: var(--muted); padding: 8px; }
+.corner.tl { top: 0; left: 0; } .corner.tr { top: 0; right: 0; }
+.corner.bl { bottom: 0; left: 0; } .corner.br { bottom: 0; right: 0; }
+.affect-grid .axis { position: absolute; font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
+.axis.top { top: -22px; left: 50%; transform: translateX(-50%); }
+.axis.bottom { bottom: -22px; left: 50%; transform: translateX(-50%); }
+.axis.left { left: -40px; top: 50%; transform: translateY(-50%); }
+.axis.right { right: -26px; top: 50%; transform: translateY(-50%); }
+.affect-grid .dot {
+  position: absolute; width: 18px; height: 18px; margin: -9px 0 0 -9px;
+  border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 6px rgba(241, 201, 75, 0.25);
+}
+.reasons { padding-left: 1.1em; color: var(--muted); font-size: 0.9rem; margin: 4px 0 10px; }
+.reasons b { color: var(--text); font-weight: 600; }
+
 /* 미리보기 페이지 */
 .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
 .mixer { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 12px 0; }
 .mixer select, .mixer input { font: inherit; }
+
+/* 표정 확인 실험실 */
+.lab-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 20px; }
+@media (max-width: 760px) { .lab-grid { grid-template-columns: 1fr; } }
+.lab video { width: 100%; border-radius: 12px; transform: scaleX(-1); background: #0b0c10; }
+.lab select { font: inherit; padding: 8px; border-radius: 8px; }
+.bars { display: grid; gap: 4px; margin-bottom: 16px; }
+.bar-row { display: grid; grid-template-columns: 9em 1fr 2.5em; gap: 8px; align-items: center; font-size: 0.85rem; }
+.bars.small .bar-row { grid-template-columns: 13em 1fr 2.5em; font-size: 0.75rem; }
+.bar { height: 8px; background: var(--surface); border-radius: 4px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--accent); }
+.bar-row b { font-weight: 500; color: var(--muted); text-align: right; }
+.lab-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.9rem; }
+.lab-table th, .lab-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }

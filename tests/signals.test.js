@@ -43,3 +43,21 @@ describe('createAverager', () => {
     expect(createAverager().value()).toEqual({});
   });
 });
+
+import { combineSources } from '../src/signal/weights.js';
+
+describe('combineSources (입력별 비율 맞춰 합치기)', () => {
+  it('각 입력을 합 1로 맞춘 뒤 반영 비율을 곱한다', () => {
+    const w = combineSources([
+      { weights: { joy: 3, calm: 1 }, scale: 1 }, //   카드: 값이 커도
+      { weights: { anger: 0.1 }, scale: 1 }, //        표정: 값이 작아도 같은 무게
+    ]);
+    expect(w.joy).toBeCloseTo(0.75);
+    expect(w.calm).toBeCloseTo(0.25);
+    expect(w.anger).toBeCloseTo(1);
+  });
+
+  it('빈 입력은 무시한다', () => {
+    expect(combineSources([{ weights: {}, scale: 1 }, { weights: { joy: 2 }, scale: 0.5 }])).toEqual({ joy: 0.5 });
+  });
+});

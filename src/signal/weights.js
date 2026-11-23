@@ -46,3 +46,17 @@ export function createAverager() {
     count: () => count,
   };
 }
+
+// 입력마다 값의 크기가 달라서(카드는 1 이상, 표정은 0.1~0.3) 그냥 더하면 한 입력이 다른 입력을 덮는다.
+// 각 입력을 합 1로 맞춘 뒤 반영 비율(scale)을 곱해 더한다.
+export function combineSources(sources) {
+  let out = {};
+  for (const { weights, scale } of sources) {
+    const total = Object.values(weights).reduce((s, w) => s + w, 0);
+    if (total <= 0) continue;
+    for (const [id, w] of Object.entries(weights)) {
+      out[id] = (out[id] ?? 0) + (w / total) * scale;
+    }
+  }
+  return out;
+}
