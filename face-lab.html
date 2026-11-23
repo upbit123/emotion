@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>표정 확인 실험실</title>
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <main id="app" class="lab">
+      <h1 class="page-title">표정 확인 실험실</h1>
+      <p class="sub">
+        표정 규칙을 내 얼굴 데이터에 맞추는 화면이에요. 영상은 이 기기 안에서만 분석하고, 기록은 '내보내기'를 누를 때만 파일로 저장돼요.
+      </p>
+      <div class="actions">
+        <button id="lab-start" class="primary">웹캠 켜기</button>
+        <button id="lab-calibrate" disabled>무표정 보정 (3초)</button>
+        <span id="lab-status" class="sub"></span>
+      </div>
+      <p id="lab-unusable" class="sub"></p>
+
+      <div class="lab-grid">
+        <section>
+          <div class="lab-live">
+            <video id="lab-cam" playsinline muted></video>
+            <div id="lab-face" class="face-box"></div>
+          </div>
+          <ul id="lab-notes" class="cues"></ul>
+          <h3>기록하기</h3>
+          <p class="sub">감정을 고르고, 그 표정을 지은 채 '3초 기록'을 누르세요. 감정마다 2~3번씩 기록하면 좋아요.</p>
+          <div class="actions">
+            <select id="lab-label"></select>
+            <button id="lab-record" disabled>3초 기록</button>
+            <button id="lab-export" disabled>JSON 내보내기</button>
+          </div>
+          <p id="lab-guide" class="guide"></p>
+          <h3>혼동 표</h3>
+          <p class="sub">지은 표정마다 규칙이 무엇으로 봤는지 세요. 대각선(맞음)이 많을수록 좋아요.</p>
+          <table class="lab-table" id="lab-confusion"></table>
+          <h3>근육 범위 조정 제안</h3>
+          <ul id="lab-ranges" class="cues"><li>기록이 쌓이면 보여요.</li></ul>
+          <div class="actions">
+            <button id="lab-apply">내 얼굴 범위 적용</button>
+            <button id="lab-reset">기본 범위로</button>
+          </div>
+          <p id="lab-range-state" class="sub"></p>
+          <h3>기록별 진단</h3>
+          <div id="lab-records"></div>
+        </section>
+        <section>
+          <h3>감정 점수 (규칙 결과)</h3>
+          <div id="lab-emotions" class="bars"></div>
+          <h3>부위별</h3>
+          <ul id="lab-regions" class="cues"></ul>
+          <h3>얼굴 움직임 (보정·정규화 후)</h3>
+          <div id="lab-features" class="bars"></div>
+          <p class="sub" id="lab-pitch"></p>
+          <details>
+            <summary>근육 원본값 52개</summary>
+            <div id="lab-raw" class="bars small"></div>
+          </details>
+        </section>
+      </div>
+    </main>
+    <script type="module" src="/src/face-lab.js"></script>
+  </body>
+</html>
