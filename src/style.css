@@ -91,7 +91,7 @@ summary { cursor: pointer; }
   font: inherit; color: var(--text); background: var(--surface);
   border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
 }
-.gap { border-left: 3px solid var(--accent); padding: 4px 0 4px 12px; margin-top: 16px; }
+.gap { background: rgba(241, 201, 75, 0.1); color: var(--text); border-radius: 10px; padding: 10px 14px; margin-top: 16px; }
 .cues { padding-left: 1.1em; color: var(--muted); }
 
 /* 미리보기 페이지 */
