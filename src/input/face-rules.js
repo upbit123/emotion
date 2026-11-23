@@ -8,6 +8,9 @@
 // 점수를 주지 않게 한다. 웃음은 부정 감정을 누르는 억제 단서로 쓴다.
 // 표정은 판정이 아니라 단서다. 그래서 왜 그렇게 보였는지 설명할 수 있게 규칙을 직접 쓴다.
 
+import { EMOTIONS } from '../emotion/emotions.js';
+
+const VALENCE = Object.fromEntries(EMOTIONS.map((e) => [e.id, e.valence]));
 const avg = (s, left, right) => ((s[left] ?? 0) + (s[right] ?? 0)) / 2;
 const both = (a, b) => Math.sqrt(Math.max(0, a) * Math.max(0, b)); // 둘 다 있어야 커진다
 const clamp01 = (x) => Math.min(1, Math.max(0, x));
@@ -19,6 +22,9 @@ export function features(s, head = {}) {
   const blink = avg(s, 'eyeBlinkLeft', 'eyeBlinkRight');
   return {
     smile: avg(s, 'mouthSmileLeft', 'mouthSmileRight'),
+    // 양쪽이 함께 올라간 정도(한쪽만 웃으면 작다)
+    smileSym: 0.6 * Math.min(s.mouthSmileLeft ?? 0, s.mouthSmileRight ?? 0) + 0.4 * avg(s, 'mouthSmileLeft', 'mouthSmileRight'),
+    smileAsym: Math.abs((s.mouthSmileLeft ?? 0) - (s.mouthSmileRight ?? 0)),
     frown: avg(s, 'mouthFrownLeft', 'mouthFrownRight'),
     browDown: avg(s, 'browDownLeft', 'browDownRight'),
     browInnerUp: s.browInnerUp ?? 0,
@@ -40,35 +46,112 @@ export function features(s, head = {}) {
 
 const MIN_SIGNAL = 0.15;
 
-export function blendshapesToWeights(scores, head = {}) {
-  const f = features(scores, head);
-  const notSmile = 1 - 0.8 * f.smile;
+// suppress=false면 웃음 같은 억제 단서를 빼고 계산한다(섞인 표정 찾기용).
+function ruleScores(f, { suppress = true } = {}) {
+  const notSmile = suppress ? 1 - 0.8 * f.smile : 1;
+  const off = (x) => (suppress ? x : 1);
   const browsUp = (f.browInnerUp + f.browOuterUp) / 2;
   // 웃음 외의 움직임이 거의 없을 때 1
   const stillness = 1 - Math.max(f.frown, f.browDown, f.browInnerUp, f.eyeWide, f.jawOpen,
     f.press, f.sneer, f.stretch, f.pout, f.upperUp, f.eyeSquint, f.droop, f.headDown);
-  // 살짝 미소(0.1~0.45)에서 가장 크고, 활짝 웃으면 0
-  const softSmile = f.smile <= 0.45 ? f.smile / 0.45 : clamp01(1 - (f.smile - 0.45) / 0.3);
+  // 양쪽이 고르게 살짝 올라간 미소(0.1~0.45)에서 가장 크고, 활짝 웃거나 한쪽만 올라가면 작다
+  const soft = f.smileSym <= 0.45 ? f.smileSym / 0.45 : clamp01(1 - (f.smileSym - 0.45) / 0.3);
+  const softSmile = soft * clamp01(1 - 2 * f.smileAsym);
 
-  const raw = {
-    joy: f.smile * (0.7 + 0.3 * f.cheek) * (1 - 0.5 * f.frown),
-    excitement: both(f.smile, Math.max(f.eyeWide, 0.8 * f.jawOpen)),
+  return {
+    // 한쪽만 올라간 입꼬리(비웃음·머쓱함)는 기쁨으로 덜 본다
+    joy: f.smileSym * (0.7 + 0.3 * f.cheek) * off(1 - 0.5 * f.frown),
+    excitement: both(f.smileSym, Math.max(f.eyeWide, 0.8 * f.jawOpen)),
     calm: both(softSmile, stillness) * 0.8,
-    surprise: both(browsUp, Math.max(f.eyeWide, f.jawOpen)) * (1 - f.browDown) * (1 - f.stretch) * (1 - 0.6 * f.smile),
+    surprise: both(browsUp, Math.max(f.eyeWide, f.jawOpen)) * off((1 - f.browDown) * (1 - f.stretch) * (1 - 0.6 * f.smile)),
     anxiety: both(f.browInnerUp, Math.max(f.eyeWide, f.stretch)) * (0.4 + 0.6 * Math.max(f.browDown, f.stretch)) * notSmile,
-    anger: both(f.browDown, Math.max(f.press, f.eyeSquint, 0.7 * f.sneer)) * (1 - 0.6 * f.browInnerUp) * notSmile,
+    anger: both(f.browDown, Math.max(f.press, f.eyeSquint, 0.7 * f.sneer)) * off(1 - 0.6 * f.browInnerUp) * notSmile,
     irritation: both(Math.max(f.sneer, f.upperUp), Math.max(f.browDown, f.frown, 0.3)) * notSmile,
-    sadness: both(f.frown, Math.max(f.browInnerUp, 0.6 * f.browDown)) * (1 - 0.8 * f.smile),
+    sadness: both(f.frown, Math.max(f.browInnerUp, 0.6 * f.browDown)) * off(1 - 0.8 * f.smile),
     hurt: both(f.pout, Math.max(f.frown, f.browInnerUp, 0.3)) * notSmile,
     lethargy: both(f.droop, Math.max(f.headDown, 0.3)) * notSmile,
   };
+}
 
+function filterSort(raw, min) {
   return Object.fromEntries(
     Object.entries(raw)
       .map(([id, w]) => [id, clamp01(w)])
-      .filter(([, w]) => w >= MIN_SIGNAL)
+      .filter(([, w]) => w >= min)
       .sort((a, b) => b[1] - a[1]),
   );
+}
+
+export function blendshapesToWeights(scores, head = {}) {
+  return filterSort(ruleScores(features(scores, head)), MIN_SIGNAL);
+}
+
+export function intensityOf(w) {
+  if (w < 0.35) return '살짝';
+  if (w < 0.65) return '뚜렷하게';
+  return '강하게';
+}
+
+const ASYM_MIN = 0.3;
+const ASYMMETRIES = [
+  ['mouthSmileLeft', 'mouthSmileRight', '한쪽 입꼬리만 올라감'],
+  ['browOuterUpLeft', 'browOuterUpRight', '한쪽 눈썹만 올라감'],
+  ['browDownLeft', 'browDownRight', '한쪽 눈썹만 내려감'],
+  ['eyeSquintLeft', 'eyeSquintRight', '한쪽 눈만 찡그림'],
+];
+
+// 한 프레임의 표정을 자세히 읽는다. 감정 점수 외에 미소의 종류, 좌우 비대칭,
+// 웃음에 가려진 단서, 쾌·불쾌가 섞인 표정을 함께 돌려준다.
+export function analyzeFace(scores, head = {}) {
+  const f = features(scores, head);
+  const weights = filterSort(ruleScores(f), MIN_SIGNAL);
+
+  let smileKind = null;
+  if (f.smile >= 0.4) {
+    // 눈가 근육(AU6)까지 움직이면 뒤센 미소, 입만 움직이면 사회적 미소
+    smileKind = Math.max(f.cheek, f.eyeSquint) >= 0.35 ? 'duchenne' : 'social';
+  }
+
+  const asymmetry = ASYMMETRIES.filter(([l, r]) => {
+    const a = scores[l] ?? 0;
+    const b = scores[r] ?? 0;
+    return Math.abs(a - b) >= ASYM_MIN && Math.max(a, b) >= ASYM_MIN;
+  }).map(([, , label]) => label);
+
+  const masked = smileKind === 'social' && Math.max(f.frown, f.browInnerUp, f.browDown) >= 0.4;
+
+  const unsuppressed = filterSort(ruleScores(f, { suppress: false }), 0.3);
+  const ids = Object.keys(unsuppressed);
+  // 놀람처럼 쾌·불쾌가 애매한 감정(|valence| < 0.3)은 섞임 판단에서 뺀다
+  const pos = ids.find((id) => VALENCE[id] >= 0.3);
+  const neg = ids.find((id) => VALENCE[id] <= -0.3);
+  const mixed = pos && neg ? [pos, neg] : null;
+
+  const intensity = Object.fromEntries(Object.entries(weights).map(([id, w]) => [id, intensityOf(w)]));
+  return { features: f, weights, intensity, smileKind, asymmetry, masked, mixed };
+}
+
+const REGIONS = [
+  ['눈썹', ['browInnerUp', 'browDown', 'browOuterUp']],
+  ['눈', ['eyeWide', 'eyeSquint', 'droop']],
+  ['볼·코', ['cheek', 'sneer']],
+  ['입', ['smile', 'frown', 'press', 'stretch', 'upperUp', 'pout', 'jawOpen']],
+  ['고개', ['headDown']],
+];
+
+// 얼굴 부위마다 가장 강한 움직임과 그 강도
+export function regionSummary(scores, head = {}) {
+  return regionsOf(features(scores, head));
+}
+
+export function regionsOf(f) {
+  return REGIONS.map(([region, keys]) => {
+    const key = keys.reduce((a, b) => ((f[b] ?? 0) > (f[a] ?? 0) ? b : a));
+    const value = f[key] ?? 0;
+    return value < MIN_SIGNAL
+      ? { region, label: '그대로', value, level: null }
+      : { region, label: CUE_LABELS[key], value, level: intensityOf(value) };
+  });
 }
 
 export const CUE_LABELS = {

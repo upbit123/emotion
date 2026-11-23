@@ -53,7 +53,7 @@ button.primary { background: var(--accent); color: #1a1600; border-color: var(--
 
 .stage-wrap { position: relative; }
 #cam-panel {
-  position: absolute; top: 12px; right: 12px; width: 200px;
+  position: absolute; top: 12px; right: 12px; width: 250px; max-height: calc(100% - 24px); overflow: auto;
   background: rgba(17, 19, 24, 0.82); border: 1px solid var(--line); border-radius: 12px;
   padding: 10px; font-size: 0.85rem;
 }
@@ -143,3 +143,26 @@ summary { cursor: pointer; }
 .lab-table th, .lab-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
 
 .page-title { font-size: 1.9rem; margin: 0 0 8px; }
+
+/* 얼굴 부위 그림 */
+.face-box:empty { display: none; }
+.face-box { width: 120px; margin: 6px auto; }
+#surface-face { width: 160px; margin: 0 0 8px; }
+.face-diagram { width: 100%; display: block; }
+.face-diagram .part { fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; transition: d 0.15s; }
+.face-diagram .part.on { stroke: var(--accent); }
+.face-diagram .head { stroke-width: 1.5; opacity: 0.6; }
+.face-diagram .cheek { fill: #ff8a7a; }
+.region { display: inline-block; min-width: 3.2em; color: var(--muted); }
+#cues .note { color: #9fd3ff; list-style: none; margin-left: -1em; }
+
+/* 실험실 상세 */
+.lab-live { display: grid; grid-template-columns: 1fr 140px; gap: 12px; align-items: center; }
+.lab-live .face-box { width: 140px; }
+.guide { background: rgba(159, 211, 255, 0.08); border-radius: 10px; padding: 10px 14px; }
+.record { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; margin: 8px 0; }
+.record.bad { border-color: rgba(255, 138, 122, 0.5); }
+.record p { margin: 2px 0; }
+.record ul { margin: 4px 0; padding-left: 1.2em; font-size: 0.85rem; }
+.record li.ok { color: #7ee2a8; }
+.record li.bad { color: var(--danger); }

@@ -29,6 +29,7 @@
           <aside id="cam-panel" hidden>
             <video id="cam" playsinline muted></video>
             <p class="cam-status">● 카메라 켜짐 · 기기 안에서만 분석</p>
+            <div id="cam-face" class="face-box"></div>
             <ul id="cues"></ul>
             <div class="cam-buttons">
               <button id="recalibrate">다시 보정</button>
@@ -73,6 +74,7 @@
           </div>
           <div>
             <h3>겉 레이어의 근거</h3>
+            <div id="surface-face" class="face-box"></div>
             <ul id="surface-cues" class="cues"></ul>
             <div class="actions">
               <button id="save" class="primary">이미지 저장</button>

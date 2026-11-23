@@ -20,7 +20,11 @@
 
       <div class="lab-grid">
         <section>
-          <video id="lab-cam" playsinline muted></video>
+          <div class="lab-live">
+            <video id="lab-cam" playsinline muted></video>
+            <div id="lab-face" class="face-box"></div>
+          </div>
+          <ul id="lab-notes" class="cues"></ul>
           <h3>기록하기</h3>
           <p class="sub">감정을 고르고, 그 표정을 지은 채 '3초 기록'을 누르세요. 감정마다 2~3번씩 기록하면 좋아요.</p>
           <div class="actions">
@@ -28,11 +32,20 @@
             <button id="lab-record" disabled>3초 기록</button>
             <button id="lab-export" disabled>JSON 내보내기</button>
           </div>
-          <table class="lab-table" id="lab-summary"></table>
+          <p id="lab-guide" class="guide"></p>
+          <h3>혼동 표</h3>
+          <p class="sub">지은 표정마다 규칙이 무엇으로 봤는지 세요. 대각선(맞음)이 많을수록 좋아요.</p>
+          <table class="lab-table" id="lab-confusion"></table>
+          <h3>근육 범위 조정 제안</h3>
+          <ul id="lab-ranges" class="cues"><li>기록이 쌓이면 보여요.</li></ul>
+          <h3>기록별 진단</h3>
+          <div id="lab-records"></div>
         </section>
         <section>
           <h3>감정 점수 (규칙 결과)</h3>
           <div id="lab-emotions" class="bars"></div>
+          <h3>부위별</h3>
+          <ul id="lab-regions" class="cues"></ul>
           <h3>얼굴 움직임 (보정·정규화 후)</h3>
           <div id="lab-features" class="bars"></div>
           <p class="sub" id="lab-pitch"></p>

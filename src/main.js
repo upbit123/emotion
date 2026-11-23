@@ -7,7 +7,9 @@ import { mixEmotions } from './emotion/mix.js';
 import { EMOTIONS, getEmotion } from './emotion/emotions.js';
 import { CARDS, answersToWeights, pickDistinguisher, cardReasons } from './input/cards.js';
 import { pointerFeatures, pointerToWeights, pointerReasons } from './input/pointer.js';
-import { blendshapesToWeights, features, cueValues, faceReasons } from './input/face-rules.js';
+import { analyzeFace, faceReasons, regionsOf, intensityOf } from './input/face-rules.js';
+import { createFaceStats } from './input/face-stats.js';
+import { faceSvg } from './ui/face-diagram.js';
 import { createCalibrator, createNormalizer } from './input/face-calibration.js';
 import { smoothWeights, topEmotions, createAverager, combineSources } from './signal/weights.js';
 import { createAffectGrid } from './ui/affect-grid.js';
@@ -25,6 +27,7 @@ const state = {
   face: {}, //               부드럽게 만든 실시간 표정 신호
   faceAvg: createAverager(), //     세션 전체 표정 신호 평균(겉 레이어)
   faceFeatAvg: createAverager(), // 세션 전체 얼굴 움직임 평균(근거 설명)
+  faceStats: createFaceStats(), //  미소 종류·비대칭·섞인 표정 통계
   pointerAvg: createAverager(),
   pointerFeatAvg: createAverager(),
   selected: new Map(), //    사용자가 붙인 감정 이름 → 비율(0~100)
@@ -102,13 +105,12 @@ async function startCamera() {
     }
 
     const { scores, pitch } = calib.normalizer.normalize(frame.scores, frame.pitch);
-    const head = { pitch };
-    const weights = blendshapesToWeights(scores, head);
-    const f = features(scores, head);
-    state.face = smoothWeights(state.face, weights, 0.15);
-    state.faceAvg.add(weights);
-    state.faceFeatAvg.add(f);
-    if (ui) renderLiveCues(f);
+    const analysis = analyzeFace(scores, { pitch });
+    state.face = smoothWeights(state.face, analysis.weights, 0.15);
+    state.faceAvg.add(analysis.weights);
+    state.faceFeatAvg.add(analysis.features);
+    state.faceStats.add(analysis);
+    if (ui) renderLiveCues(analysis);
   });
   $('#cam-panel').hidden = false;
   beginCalibration();
@@ -130,15 +132,36 @@ function stopCamera() {
 }
 
 function renderCamStatus(message) {
+  $('#cam-face').innerHTML = '';
   $('#cues').innerHTML = `<li class="cue-guess">${message}</li>`;
 }
 
-function renderLiveCues(f) {
-  const cues = cueValues(f).slice(0, 3);
-  const [top] = topEmotions(state.face, 1, 0.2);
+// 실시간 근거: 부위 그림 + 부위별 움직임 + 강도가 붙은 추측 + 미소 종류·비대칭·섞인 표정
+function renderLiveCues(a) {
+  $('#cam-face').innerHTML = faceSvg(a.features);
+  const regions = regionsOf(a.features).filter((r) => r.level);
+  const [top] = Object.entries(state.face).sort((x, y) => y[1] - x[1]);
+  const guess =
+    top && top[1] >= 0.2
+      ? `→ ${withJosa(getEmotion(top[0]).name, '이/가')} ${intensityOf(top[1])} 보여요`
+      : '뚜렷한 표정 단서 없음';
   $('#cues').innerHTML =
-    cues.map((c) => `<li>${c.label}</li>`).join('') +
-    (top ? `<li class="cue-guess">→ ${getEmotion(top.id).name}처럼 보여요</li>` : '<li>뚜렷한 표정 단서 없음</li>');
+    regions.map((r) => `<li><span class="region">${r.region}</span> ${r.label} · ${r.level}</li>`).join('') +
+    faceNotes(a).map((n) => `<li class="note">${n}</li>`).join('') +
+    `<li class="cue-guess">${guess}</li>`;
+}
+
+function faceNotes(a) {
+  const notes = [];
+  if (a.smileKind === 'duchenne') notes.push('눈까지 웃는 미소');
+  if (a.smileKind === 'social') notes.push('입으로만 웃는 미소');
+  if (a.masked) notes.push('웃음 뒤로 다른 단서도 보여요');
+  if (a.mixed) {
+    const [p, n] = a.mixed.map((id) => getEmotion(id).name);
+    notes.push(`${withJosa(p, '와/과')} ${n} 단서가 함께 보여요`);
+  }
+  notes.push(...a.asymmetry);
+  return notes;
 }
 
 // ── 1단계: 카드 질문 + 움직임 ──────────────────────────────
@@ -459,10 +482,24 @@ function updateGapNote() {
 function renderSurfaceCues(kind) {
   const list = $('#surface-cues');
   if (kind === 'face') {
-    const cues = cueValues(state.faceFeatAvg.value()).slice(0, 4);
-    list.innerHTML = cues.length
-      ? cues.map((c) => `<li>${c.label} (평균 ${Math.round(c.value * 100)})</li>`).join('')
-      : '<li>뚜렷한 얼굴 움직임이 없었어요</li>';
+    const avg = state.faceFeatAvg.value();
+    $('#surface-face').innerHTML = faceSvg(avg);
+    const regions = regionsOf(avg);
+    const st = state.faceStats.summary();
+    const pct = (v) => `${Math.round(v * 100)}%`;
+    const peak = Object.entries(st.peaks).sort((a, b) => b[1] - a[1])[0];
+    const lines = [
+      ...regions.map((r) =>
+        r.level
+          ? `<li><span class="region">${r.region}</span> ${r.label} · ${r.level} (평균 ${Math.round(r.value * 100)})</li>`
+          : `<li><span class="region">${r.region}</span> 거의 그대로</li>`),
+      st.smileShare > 0 ? `<li>웃은 시간 ${pct(st.smileShare)}, 그중 눈까지 웃은 미소 ${pct(st.duchenneShare)}</li>` : '',
+      st.maskedShare >= 0.05 ? `<li>웃음 뒤로 다른 단서가 보인 시간 ${pct(st.maskedShare)}</li>` : '',
+      st.mixedShare >= 0.05 ? `<li>쾌·불쾌 단서가 섞인 시간 ${pct(st.mixedShare)}</li>` : '',
+      st.asymShare >= 0.05 ? `<li>한쪽만 움직인 표정이 보인 시간 ${pct(st.asymShare)}</li>` : '',
+      peak ? `<li>가장 강했던 순간: ${getEmotion(peak[0]).name} (${intensityOf(peak[1])})</li>` : '',
+    ];
+    list.innerHTML = lines.join('');
     return;
   }
   const f = state.pointerFeatAvg.value();
