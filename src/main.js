@@ -10,7 +10,8 @@ import { pointerFeatures, pointerToWeights, pointerReasons } from './input/point
 import { analyzeFace, faceReasons, regionsOf, intensityOf } from './input/face-rules.js';
 import { createFaceStats } from './input/face-stats.js';
 import { faceSvg } from './ui/face-diagram.js';
-import { createCalibrator, createNormalizer } from './input/face-calibration.js';
+import { createCalibrator, createNormalizer, FACE_RANGES } from './input/face-calibration.js';
+import { loadPersonalRanges } from './input/face-profile.js';
 import { smoothWeights, topEmotions, createAverager, combineSources } from './signal/weights.js';
 import { createAffectGrid } from './ui/affect-grid.js';
 import { withJosa } from './ui/josa.js';
@@ -97,15 +98,16 @@ async function startCamera() {
       calib.calibrator.add(frame.scores, frame.pitch);
       const left = Math.max(0, Math.ceil((calib.until - now) / 1000));
       if (now >= calib.until && calib.calibrator.count() >= MIN_CALIBRATION_FRAMES) {
-        calib.normalizer = createNormalizer(calib.calibrator.baseline());
+        // 실험실에서 '내 얼굴 범위 적용'을 했다면 그 범위를 쓴다
+        calib.normalizer = createNormalizer(calib.calibrator.baseline(), loadPersonalRanges() ?? FACE_RANGES);
       } else if (ui) {
         renderCamStatus(`3초만 편하게 정면을 봐 주세요 (${left || 1})`);
       }
       return;
     }
 
-    const { scores, pitch } = calib.normalizer.normalize(frame.scores, frame.pitch);
-    const analysis = analyzeFace(scores, { pitch });
+    const { scores, pitch, drops } = calib.normalizer.normalize(frame.scores, frame.pitch);
+    const analysis = analyzeFace(scores, { pitch, drops });
     state.face = smoothWeights(state.face, analysis.weights, 0.15);
     state.faceAvg.add(analysis.weights);
     state.faceFeatAvg.add(analysis.features);

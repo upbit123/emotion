@@ -51,3 +51,45 @@ describe('createNormalizer (근육별 범위 맞추기)', () => {
     expect(Number.isFinite(v)).toBe(true);
   });
 });
+
+import { personalRanges } from '../src/input/face-calibration.js';
+
+describe('기준값보다 떨어지는 움직임(drops)', () => {
+  it('무표정에서 높던 값이 내려가면 그만큼을 drop으로 돌려준다', () => {
+    const norm = createNormalizer({ scores: { eyeSquintLeft: 0.5 }, pitch: 0 });
+    const { drops } = norm.normalize({ eyeSquintLeft: 0.25 });
+    expect(drops.eyeSquintLeft).toBeCloseTo(0.5);
+  });
+
+  it('무표정 값이 낮은 근육은 drop을 계산하지 않는다', () => {
+    const norm = createNormalizer({ scores: { browDownLeft: 0.05 }, pitch: 0 });
+    expect(norm.normalize({ browDownLeft: 0 }).drops.browDownLeft).toBeUndefined();
+  });
+});
+
+describe('쓸 수 없는 근육', () => {
+  it('무표정에서 이미 최대치에 가까우면 0으로 내고 목록에 남긴다', () => {
+    const norm = createNormalizer({ scores: { mouthPucker: 0.95 }, pitch: 0 });
+    expect(norm.normalize({ mouthPucker: 1 }).scores.mouthPucker).toBe(0);
+    expect(norm.unusable()).toContain('mouthPucker');
+  });
+});
+
+describe('개인 범위', () => {
+  it('직접 준 범위를 기본값 대신 쓴다', () => {
+    const norm = createNormalizer({ scores: {}, pitch: 0 }, { browDownLeft: 0.2 });
+    expect(norm.normalize({ browDownLeft: 0.1 }).scores.browDownLeft).toBeCloseTo(0.5);
+  });
+
+  it('기록의 95% 지점 값을 근육별 범위로 만든다', () => {
+    const frames = Array.from({ length: 100 }, (_, i) => ({ scores: { browDownLeft: i / 500 } })); // 0~0.198
+    const ranges = personalRanges([{ label: 'anger', frames }], { scores: { browDownLeft: 0 } }, { browDownLeft: 0.5 });
+    expect(ranges.browDownLeft).toBeCloseTo(0.19, 2);
+  });
+
+  it('거의 안 움직인 근육은 기본값을 유지한다', () => {
+    const frames = [{ scores: { noseSneerLeft: 0.001 } }];
+    const ranges = personalRanges([{ label: 'x', frames }], { scores: {} }, { noseSneerLeft: 0.2 });
+    expect(ranges.noseSneerLeft).toBe(0.2);
+  });
+});

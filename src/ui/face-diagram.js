@@ -16,7 +16,7 @@ export function faceShape(f) {
     },
     eye: {
       cy: 94 + dy,
-      ry: Math.max(1.5, 7 * (1 + 0.6 * f.eyeWide - 0.6 * Math.max(f.droop, f.eyeSquint))),
+      ry: Math.max(1.5, 7 * (1 + 0.6 * Math.max(f.eyeWide ?? 0, f.eyeOpen ?? 0) - 0.6 * Math.max(f.droop, f.eyeSquint))),
     },
     mouth: {
       cornerY,
@@ -29,10 +29,10 @@ export function faceShape(f) {
     sneer: f.sneer,
     active: {
       brow: max(f, ['browInnerUp', 'browDown', 'browOuterUp']) >= ACTIVE,
-      eye: max(f, ['eyeWide', 'eyeSquint', 'droop']) >= ACTIVE,
+      eye: max(f, ['eyeWide', 'eyeOpen', 'eyeSquint', 'droop', 'glance']) >= ACTIVE,
       nose: f.sneer >= ACTIVE,
       cheek: f.cheek >= ACTIVE,
-      mouth: max(f, ['smile', 'frown', 'press', 'stretch', 'upperUp', 'pout', 'jawOpen']) >= ACTIVE,
+      mouth: max(f, ['smile', 'frown', 'press', 'roll', 'stretch', 'upperUp', 'pout', 'jawOpen']) >= ACTIVE,
       head: (f.headDown ?? 0) >= ACTIVE,
     },
   };

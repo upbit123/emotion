@@ -18,8 +18,11 @@ const clamp01 = (x) => Math.min(1, Math.max(0, x));
 // 고개를 이만큼(라디안, 약 20도) 숙이면 '고개 숙임' 1
 const HEAD_DOWN_FULL = 0.35;
 
+// head: { pitch: 고개 숙임(라디안, 보정 후), drops: 무표정보다 떨어진 근육값 }
 export function features(s, head = {}) {
   const blink = avg(s, 'eyeBlinkLeft', 'eyeBlinkRight');
+  const drops = head.drops ?? {};
+  const eyeWide = avg(s, 'eyeWideLeft', 'eyeWideRight');
   return {
     smile: avg(s, 'mouthSmileLeft', 'mouthSmileRight'),
     // 양쪽이 함께 올라간 정도(한쪽만 웃으면 작다)
@@ -29,12 +32,18 @@ export function features(s, head = {}) {
     browDown: avg(s, 'browDownLeft', 'browDownRight'),
     browInnerUp: s.browInnerUp ?? 0,
     browOuterUp: avg(s, 'browOuterUpLeft', 'browOuterUpRight'),
-    eyeWide: avg(s, 'eyeWideLeft', 'eyeWideRight'),
+    eyeWide,
+    // 평소 찡그린 눈이 풀리는 것도 눈을 크게 뜬 것으로 본다
+    eyeOpen: Math.max(eyeWide, avg(drops, 'eyeSquintLeft', 'eyeSquintRight')),
     eyeSquint: avg(s, 'eyeSquintLeft', 'eyeSquintRight'),
     // 완전히 감은 눈은 깜빡임이라 '처짐'으로 보지 않는다
     droop: blink >= 0.9 ? 0 : blink,
     jawOpen: s.jawOpen ?? 0,
     press: avg(s, 'mouthPressLeft', 'mouthPressRight'),
+    // 입술을 안으로 말아 앙다묾(분노 기록에서 가장 크게 움직인 근육)
+    roll: ((s.mouthRollLower ?? 0) + (s.mouthRollUpper ?? 0)) / 2,
+    // 두 눈이 같은 쪽 옆으로 향함 = 흘겨봄(짜증 기록에서 두드러진 움직임)
+    glance: Math.max(avg(s, 'eyeLookOutLeft', 'eyeLookInRight'), avg(s, 'eyeLookInLeft', 'eyeLookOutRight')),
     sneer: avg(s, 'noseSneerLeft', 'noseSneerRight'),
     stretch: avg(s, 'mouthStretchLeft', 'mouthStretchRight'),
     cheek: avg(s, 'cheekSquintLeft', 'cheekSquintRight'),
@@ -51,25 +60,28 @@ function ruleScores(f, { suppress = true } = {}) {
   const notSmile = suppress ? 1 - 0.8 * f.smile : 1;
   const off = (x) => (suppress ? x : 1);
   const browsUp = (f.browInnerUp + f.browOuterUp) / 2;
-  // 웃음 외의 움직임이 거의 없을 때 1
-  const stillness = 1 - Math.max(f.frown, f.browDown, f.browInnerUp, f.eyeWide, f.jawOpen,
-    f.press, f.sneer, f.stretch, f.pout, f.upperUp, f.eyeSquint, f.droop, f.headDown);
+  // 웃음 외의 움직임이 거의 없을 때 1(눈꺼풀이 조금 내려가거나 고개를 살짝 숙이는 건 이완으로 본다)
+  const stillness = 1 - Math.max(f.frown, f.browDown, f.browInnerUp, f.eyeOpen, f.jawOpen,
+    f.press, f.roll, f.sneer, f.stretch, f.pout, f.upperUp, f.eyeSquint, f.glance);
+  const tension = Math.max(f.press, f.roll); // 입에 힘이 들어감
   // 양쪽이 고르게 살짝 올라간 미소(0.1~0.45)에서 가장 크고, 활짝 웃거나 한쪽만 올라가면 작다
   const soft = f.smileSym <= 0.45 ? f.smileSym / 0.45 : clamp01(1 - (f.smileSym - 0.45) / 0.3);
   const softSmile = soft * clamp01(1 - 2 * f.smileAsym);
 
   return {
     // 한쪽만 올라간 입꼬리(비웃음·머쓱함)는 기쁨으로 덜 본다
-    joy: f.smileSym * (0.7 + 0.3 * f.cheek) * off(1 - 0.5 * f.frown),
-    excitement: both(f.smileSym, Math.max(f.eyeWide, 0.8 * f.jawOpen)),
+    // 눈을 뜨거나 눈썹이 올라간 웃음은 기쁨보다 설렘 쪽으로 나눠 준다
+    joy: f.smileSym * (0.7 + 0.3 * f.cheek) * off(1 - 0.5 * f.frown) * off(1 - 0.5 * Math.max(f.eyeOpen, f.jawOpen, f.browOuterUp)),
+    excitement: both(f.smileSym, Math.max(f.eyeOpen, 0.8 * f.jawOpen, f.browOuterUp)),
     calm: both(softSmile, stillness) * 0.8,
-    surprise: both(browsUp, Math.max(f.eyeWide, f.jawOpen)) * off((1 - f.browDown) * (1 - f.stretch) * (1 - 0.6 * f.smile)),
-    anxiety: both(f.browInnerUp, Math.max(f.eyeWide, f.stretch)) * (0.4 + 0.6 * Math.max(f.browDown, f.stretch)) * notSmile,
-    anger: both(f.browDown, Math.max(f.press, f.eyeSquint, 0.7 * f.sneer)) * off(1 - 0.6 * f.browInnerUp) * notSmile,
-    irritation: both(Math.max(f.sneer, f.upperUp), Math.max(f.browDown, f.frown, 0.3)) * notSmile,
+    surprise: both(browsUp, Math.max(f.eyeOpen, f.jawOpen)) * off((1 - f.browDown) * (1 - f.stretch) * (1 - 0.6 * f.smile)),
+    anxiety: both(f.browInnerUp, Math.max(f.eyeOpen, f.stretch)) * (0.4 + 0.6 * Math.max(f.browDown, f.stretch)) * notSmile,
+    anger: both(Math.max(f.browDown, f.eyeSquint), Math.max(f.press, f.roll, 0.7 * f.sneer)) * off(1 - 0.6 * f.browInnerUp) * notSmile,
+    irritation: both(Math.max(f.sneer, f.upperUp, f.glance), Math.max(f.browDown, f.frown, f.eyeSquint, 0.3)) * notSmile,
     sadness: both(f.frown, Math.max(f.browInnerUp, 0.6 * f.browDown)) * off(1 - 0.8 * f.smile),
     hurt: both(f.pout, Math.max(f.frown, f.browInnerUp, 0.3)) * notSmile,
-    lethargy: both(f.droop, Math.max(f.headDown, 0.3)) * notSmile,
+    // 눈꺼풀과 고개 숙임이 함께 있어야 하고, 입에 힘이 들어가 있으면(분노 등) 무기력으로 보지 않는다
+    lethargy: both(f.droop, f.headDown) * off(1 - tension) * notSmile,
   };
 }
 
@@ -133,9 +145,9 @@ export function analyzeFace(scores, head = {}) {
 
 const REGIONS = [
   ['눈썹', ['browInnerUp', 'browDown', 'browOuterUp']],
-  ['눈', ['eyeWide', 'eyeSquint', 'droop']],
+  ['눈', ['eyeOpen', 'eyeSquint', 'droop', 'glance']],
   ['볼·코', ['cheek', 'sneer']],
-  ['입', ['smile', 'frown', 'press', 'stretch', 'upperUp', 'pout', 'jawOpen']],
+  ['입', ['smile', 'frown', 'press', 'roll', 'stretch', 'upperUp', 'pout', 'jawOpen']],
   ['고개', ['headDown']],
 ];
 
@@ -160,11 +172,13 @@ export const CUE_LABELS = {
   browDown: '눈썹 내려감',
   browInnerUp: '눈썹 안쪽 올라감',
   browOuterUp: '눈썹 바깥 올라감',
-  eyeWide: '눈 크게 뜸',
+  eyeOpen: '눈 크게 뜸',
   eyeSquint: '눈 가늘게 뜸',
   droop: '눈꺼풀 처짐',
   jawOpen: '입 벌림',
   press: '입술 누름',
+  roll: '입술 앙다묾',
+  glance: '눈 흘김',
   sneer: '코 찡그림',
   stretch: '입을 옆으로 당김',
   cheek: '볼 올라감',
@@ -190,12 +204,12 @@ export function cueValues(f) {
 // 감정마다 근거가 되는 얼굴 움직임(규칙에서 점수를 올리는 쪽만)
 const EMOTION_FEATURES = {
   joy: ['smile', 'cheek'],
-  excitement: ['smile', 'eyeWide', 'jawOpen'],
+  excitement: ['smile', 'eyeOpen', 'jawOpen', 'browOuterUp'],
   calm: ['smile'],
-  surprise: ['browInnerUp', 'browOuterUp', 'eyeWide', 'jawOpen'],
-  anxiety: ['browInnerUp', 'eyeWide', 'stretch', 'browDown'],
-  anger: ['browDown', 'press', 'eyeSquint', 'sneer'],
-  irritation: ['sneer', 'upperUp', 'browDown'],
+  surprise: ['browInnerUp', 'browOuterUp', 'eyeOpen', 'jawOpen'],
+  anxiety: ['browInnerUp', 'eyeOpen', 'stretch', 'browDown'],
+  anger: ['browDown', 'eyeSquint', 'press', 'roll', 'sneer'],
+  irritation: ['sneer', 'upperUp', 'glance', 'browDown'],
   sadness: ['frown', 'browInnerUp', 'browDown'],
   hurt: ['pout', 'frown'],
   lethargy: ['droop', 'headDown'],

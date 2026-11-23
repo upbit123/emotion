@@ -1,6 +1,7 @@
 import './style.css';
 import { startFaceTracking } from './input/face.js';
-import { createCalibrator, createNormalizer, FACE_RANGES } from './input/face-calibration.js';
+import { createCalibrator, createNormalizer, personalRanges, FACE_RANGES } from './input/face-calibration.js';
+import { loadPersonalRanges, savePersonalRanges, clearPersonalRanges } from './input/face-profile.js';
 import { analyzeFace, CUE_LABELS, regionsOf } from './input/face-rules.js';
 import {
   EXPRESSION_GUIDE, diagnoseRule, confusionRows, suggestRanges, predictionName,
@@ -21,7 +22,9 @@ showGuide();
 let calibrator = null;
 let calibrateUntil = 0;
 let baseline = { scores: {}, pitch: 0 };
-let normalizer = createNormalizer(baseline);
+let ranges = loadPersonalRanges() ?? FACE_RANGES;
+let normalizer = createNormalizer(baseline, ranges);
+showRangeState();
 let recording = null; // { label, until, frames }
 const samples = []; //   [{ label, frames: [{ scores, pitch }] }]
 let lastUi = 0;
@@ -54,7 +57,7 @@ $('#lab-record').addEventListener('click', () => {
 });
 
 $('#lab-export').addEventListener('click', () => {
-  const data = { version: 1, createdAt: new Date().toISOString(), baseline, ranges: FACE_RANGES, samples };
+  const data = { version: 1, createdAt: new Date().toISOString(), baseline, ranges, samples };
   const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -78,8 +81,9 @@ function onFrame(frame) {
     calibrator.add(frame.scores, frame.pitch);
     if (now >= calibrateUntil) {
       baseline = calibrator.baseline();
-      normalizer = createNormalizer(baseline);
+      normalizer = createNormalizer(baseline, ranges);
       calibrator = null;
+      renderUnusable();
       $('#lab-status').textContent = '보정 완료. 감정을 고르고 기록해 보세요.';
       $('#lab-record').disabled = false;
     }
@@ -100,8 +104,8 @@ function onFrame(frame) {
   if (now - lastUi < 150) return;
   lastUi = now;
 
-  const { scores, pitch } = normalizer.normalize(frame.scores, frame.pitch);
-  const a = analyzeFace(scores, { pitch });
+  const { scores, pitch, drops } = normalizer.normalize(frame.scores, frame.pitch);
+  const a = analyzeFace(scores, { pitch, drops });
   const f = a.features;
 
   $('#lab-face').innerHTML = faceSvg(f);
@@ -142,12 +146,14 @@ function renderBars(host, rows) {
 function analyzeRecord({ frames }) {
   const avg = {};
   let pitchSum = 0;
+  const drops = {};
   for (const fr of frames) {
     const n = normalizer.normalize(fr.scores, fr.pitch);
     for (const [k, v] of Object.entries(n.scores)) avg[k] = (avg[k] ?? 0) + v / frames.length;
+    for (const [k, v] of Object.entries(n.drops)) drops[k] = (drops[k] ?? 0) + v / frames.length;
     pitchSum += n.pitch;
   }
-  return analyzeFace(avg, { pitch: pitchSum / frames.length });
+  return analyzeFace(avg, { pitch: pitchSum / frames.length, drops });
 }
 
 function renderAnalysis() {
@@ -171,9 +177,9 @@ function renderAnalysis() {
     `<tr><th>전체</th><th>${totalCorrect}/${results.length}</th><th></th></tr>`;
 
   // 근육 범위 조정 제안
-  const ranges = suggestRanges(samples, FACE_RANGES);
-  $('#lab-ranges').innerHTML = ranges.length
-    ? ranges
+  const suggestions = suggestRanges(samples, ranges);
+  $('#lab-ranges').innerHTML = suggestions.length
+    ? suggestions
         .map((r) => `<li><code>${r.key}</code>: 기록 최대 ${r.observed.toFixed(2)} &lt; 보통 최대치 ${r.current} → 낮추면 더 잘 잡혀요</li>`)
         .join('')
     : '<li>지금 범위로 충분해 보여요.</li>';
@@ -203,4 +209,36 @@ function renderAnalysis() {
     })
     .reverse()
     .join('');
+}
+
+// ── 내 얼굴 범위 ─────────────────────────────────────────
+$('#lab-apply').addEventListener('click', () => {
+  ranges = personalRanges(samples, baseline, FACE_RANGES);
+  const saved = savePersonalRanges(ranges);
+  normalizer = createNormalizer(baseline, ranges);
+  showRangeState(saved ? undefined : '저장소가 막혀 이 페이지에서만 적용됐어요.');
+  renderAnalysis();
+});
+
+$('#lab-reset').addEventListener('click', () => {
+  clearPersonalRanges();
+  ranges = FACE_RANGES;
+  normalizer = createNormalizer(baseline, ranges);
+  showRangeState();
+  if (samples.length) renderAnalysis();
+});
+
+function showRangeState(message) {
+  const personal = ranges !== FACE_RANGES;
+  $('#lab-range-state').textContent =
+    message ?? (personal ? '내 얼굴 범위 적용 중 (본 작품에도 적용돼요)' : '기본 범위 사용 중');
+}
+
+function renderUnusable() {
+  // 기준값을 한 번 정규화하면 무표정에서 이미 최대인 근육이 드러난다
+  normalizer.normalize(baseline.scores, baseline.pitch);
+  const list = normalizer.unusable();
+  $('#lab-unusable').textContent = list.length
+    ? `무표정에서 이미 최대라 쓸 수 없는 근육: ${list.join(', ')}`
+    : '';
 }

@@ -121,3 +121,41 @@ describe('faceReasons', () => {
     expect(faceReasons(avg, 'joy')).toEqual([]);
   });
 });
+
+describe('데이터로 보완한 단서 (2026-11-24 기록 분석)', () => {
+  it('입술을 앙다물고 눈을 찡그리면 분노', () => {
+    const w = blendshapesToWeights({ mouthRollLower: 0.8, mouthRollUpper: 0.7, eyeSquintLeft: 0.4, eyeSquintRight: 0.4 });
+    expect(top(w)).toBe('anger');
+  });
+
+  it('입술에 힘이 들어가 있으면 고개를 숙여도 무기력으로 보지 않는다', () => {
+    const w = blendshapesToWeights(
+      { mouthRollLower: 0.8, mouthRollUpper: 0.8, eyeSquintLeft: 0.45, eyeSquintRight: 0.45, eyeBlinkLeft: 0.33, eyeBlinkRight: 0.33 },
+      { pitch: 0.1 },
+    );
+    expect(w.anger).toBeGreaterThan(w.lethargy ?? 0);
+  });
+
+  it('눈동자를 옆으로 흘기면 짜증', () => {
+    const w = blendshapesToWeights({ eyeLookInLeft: 0.5, eyeLookOutRight: 0.5 });
+    expect(top(w)).toBe('irritation');
+  });
+
+  it('찡그림이 풀리는 것(drop)도 눈을 크게 뜬 것으로 본다', () => {
+    const w = blendshapesToWeights(
+      { browInnerUp: 0.6, browOuterUpLeft: 0.6, browOuterUpRight: 0.6, jawOpen: 0.5 },
+      { drops: { eyeSquintLeft: 0.6, eyeSquintRight: 0.6 } },
+    );
+    expect(w.surprise).toBeGreaterThan(0.5);
+  });
+
+  it('눈꺼풀만 조금 내려간 살짝 미소는 무기력이 아니라 평온', () => {
+    const w = blendshapesToWeights({ mouthSmileLeft: 0.25, mouthSmileRight: 0.22, eyeBlinkLeft: 0.33, eyeBlinkRight: 0.33 }, { pitch: 0.03 });
+    expect(top(w)).toBe('calm');
+  });
+
+  it('고개를 숙이지 않으면 눈꺼풀만으로는 무기력이 약하다', () => {
+    const w = blendshapesToWeights({ eyeBlinkLeft: 0.4, eyeBlinkRight: 0.4 });
+    expect(w.lethargy ?? 0).toBeLessThan(0.15);
+  });
+});

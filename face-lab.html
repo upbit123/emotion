@@ -17,6 +17,7 @@
         <button id="lab-calibrate" disabled>무표정 보정 (3초)</button>
         <span id="lab-status" class="sub"></span>
       </div>
+      <p id="lab-unusable" class="sub"></p>
 
       <div class="lab-grid">
         <section>
@@ -38,6 +39,11 @@
           <table class="lab-table" id="lab-confusion"></table>
           <h3>근육 범위 조정 제안</h3>
           <ul id="lab-ranges" class="cues"><li>기록이 쌓이면 보여요.</li></ul>
+          <div class="actions">
+            <button id="lab-apply">내 얼굴 범위 적용</button>
+            <button id="lab-reset">기본 범위로</button>
+          </div>
+          <p id="lab-range-state" class="sub"></p>
           <h3>기록별 진단</h3>
           <div id="lab-records"></div>
         </section>
