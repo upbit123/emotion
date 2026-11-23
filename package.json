@@ -4,7 +4,10 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "setup": "node scripts/setup-mediapipe.js",
+    "predev": "npm run setup",
     "dev": "vite",
+    "prebuild": "npm run setup",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run"

@@ -4,10 +4,24 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>감정 미리보기</title>
+    <link rel="icon" href="data:," />
   </head>
   <body>
-    <h1>감정 미리보기</h1>
-    <div id="canvas"></div>
+    <main id="app">
+      <h2>감정 12종 미리보기</h2>
+      <p class="sub">각 칸이 어떤 감정처럼 보이는지 다른 사람에게 이름을 가리고 물어보세요.</p>
+      <label class="sub"><input type="checkbox" id="hide-names" /> 감정 이름 가리기</label>
+      <div id="gallery" class="gallery"></div>
+
+      <h2 style="margin-top: 32px">두 감정 섞기</h2>
+      <div class="mixer">
+        <select id="mix-a"></select>
+        <input id="mix-ratio" type="range" min="0" max="100" value="50" />
+        <select id="mix-b"></select>
+        <span id="mix-label" class="sub"></span>
+      </div>
+      <div id="mix-canvas" class="canvas-host"></div>
+    </main>
     <script type="module" src="/src/preview.js"></script>
   </body>
 </html>

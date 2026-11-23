@@ -7,6 +7,7 @@ export default defineConfig({
   build: {
     rolldownOptions: {
       input: {
+        main: resolve(import.meta.dirname, 'index.html'),
         preview: resolve(import.meta.dirname, 'preview.html'),
       },
     },

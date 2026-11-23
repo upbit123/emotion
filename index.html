@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>나의 [감정]들</title>
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <main id="app">
+      <section id="intro" class="screen">
+        <h1>나의 <span class="bracket">[감정]</span>들</h1>
+        <p class="lead">지금 마음을 색과 움직임으로 그려 보고, 그 감정에 직접 이름을 붙여 보세요.</p>
+        <ul class="notice">
+          <li>진단 도구가 아니에요. 감정을 판정하지 않고 단서만 보여 줘요. 이름은 내가 붙여요.</li>
+          <li>웹캠을 켜면 표정을 이 기기 안에서만 분석해요. 영상은 저장하거나 어디로도 보내지 않아요.</li>
+          <li>웹캠 없이도 끝까지 할 수 있어요.</li>
+        </ul>
+        <div class="actions">
+          <button id="start-cam" class="primary">웹캠 켜고 시작</button>
+          <button id="start-nocam">웹캠 없이 시작</button>
+        </div>
+        <p id="cam-error" class="error" hidden></p>
+      </section>
+
+      <section id="stage" class="screen" hidden>
+        <div class="stage-wrap">
+          <div id="stage-canvas" class="canvas-host"></div>
+          <aside id="cam-panel" hidden>
+            <video id="cam" playsinline muted></video>
+            <p class="cam-status">● 카메라 켜짐 · 기기 안에서만 분석</p>
+            <ul id="cues"></ul>
+            <button id="cam-off">웹캠 끄기</button>
+          </aside>
+        </div>
+        <p class="hint">마우스를 자유롭게 움직여 보세요. 움직임도 그림이 돼요.</p>
+        <div class="card">
+          <div id="card-body">
+            <p id="card-step" class="card-step"></p>
+            <h2 id="card-q"></h2>
+            <div id="card-options" class="card-options"></div>
+          </div>
+          <div id="card-done" hidden>
+            <h2>질문이 끝났어요</h2>
+            <p class="sub">조금 더 움직여 봐도 되고, 바로 결과를 봐도 돼요.</p>
+          </div>
+          <button id="to-result" class="primary">결과 보기</button>
+        </div>
+      </section>
+
+      <section id="result" class="screen" hidden>
+        <div id="result-canvas" class="canvas-host"></div>
+        <div class="panel">
+          <div>
+            <h2>이런 감정들이 보여요</h2>
+            <p class="sub">제안일 뿐이에요. 맞는 걸 고르고, 비율을 조절하고, 딱 맞는 말이 없으면 직접 써 보세요.</p>
+            <div id="suggestions" class="chips"></div>
+            <details>
+              <summary>다른 감정 더 보기</summary>
+              <div id="all-emotions" class="chips"></div>
+            </details>
+            <div id="selected"></div>
+            <label class="custom">
+              내 말로 이름 붙이기
+              <input id="custom-name" maxlength="24" placeholder="예: 식어 가는 커피 같은 마음" />
+            </label>
+            <p id="gap-note" class="gap" hidden></p>
+          </div>
+          <div>
+            <h3>겉 레이어의 근거</h3>
+            <ul id="surface-cues" class="cues"></ul>
+            <div class="actions">
+              <button id="save" class="primary">이미지 저장</button>
+              <button id="restart">처음부터</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
