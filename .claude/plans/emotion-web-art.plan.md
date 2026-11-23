@@ -67,11 +67,11 @@ tests/                  ★ 매핑 함수 테스트
 | `.gitignore` | CREATE | `node_modules`, `dist` 제외 |
 
 ## Tasks
-### Task 1: 프로젝트 뼈대
+### Task 1: 프로젝트 뼈대 ✅ (985fc0e)
 - **Action**: Vite 프로젝트 생성, p5·Vitest 설치, 빈 p5 캔버스가 뜨는지 확인
 - **Validate**: `npm run dev`로 캔버스 표시, `npm test` 통과(빈 테스트)
 
-### Task 2: 감정 목록 정하기 — ❓질문 1
+### Task 2: 감정 목록 정하기 ✅ (C안 12개 선택)
 - **Action**: 다룰 감정 개수와 이름을 준현님과 정한다(기본 감정에서 시작해 '불안·조급함'처럼 노트에서 나온 감정 추가 여부)
 - **Validate**: `emotions.js`에 목록 확정
 
