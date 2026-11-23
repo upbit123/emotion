@@ -141,3 +141,5 @@ summary { cursor: pointer; }
 .bar-row b { font-weight: 500; color: var(--muted); text-align: right; }
 .lab-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.9rem; }
 .lab-table th, .lab-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+
+.page-title { font-size: 1.9rem; margin: 0 0 8px; }
